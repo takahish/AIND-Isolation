@@ -10,6 +10,47 @@ class SearchTimeout(Exception):
     pass
 
 
+def euclidean_distance_score(game, player, own_weight=1., opp_weight=1.):
+    """The "euclidean_distance_score" evaluation function that outputs a
+    score equal to the euclidean distance in the space of the number of
+     weighted moves available to the two players.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
+
+    own_weight : float
+        weigth for own moves
+
+    opp_weight : float
+        weight for oppnent moves
+
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+    if game.is_loser(player):
+        return 0.
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+
+    return float(abs((own_weight*own_moves)-(opp_weight*opp_moves)))
+
+
+
+
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
     of the given player.
@@ -34,8 +75,7 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    return euclidean_distance_score(game, player, own_weight=1.0, opp_weight=1.0)
 
 
 def custom_score_2(game, player):
@@ -60,8 +100,7 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    return euclidean_distance_score(game, player, own_weight=3.0, opp_weight=1.0)
 
 
 def custom_score_3(game, player):
@@ -86,8 +125,7 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    return euclidean_distance_score(game, player, own_weight=1.0, opp_weight=3.0)
 
 
 class IsolationPlayer:
@@ -212,8 +250,96 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        best_score = float("-inf")
+        best_move = None
+        for m in game.get_legal_moves():
+            v = self._min_value(game.forecast_move(m), depth-1)
+            if v > best_score:
+                best_score = v
+                best_move = m
+        return best_move
+
+    def _terminal_test(self, game, depth):
+        """Return True if the game is over for the active player
+        and False otherwise.
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        bool
+            Return True if the game is over for the active player
+            and False otherwise.
+        """
+        return (depth == 0) or (not bool(game.get_legal_moves()))
+
+    def _min_value(self, game, depth):
+        """Return the value for a win if the game is over,
+        otherwise return the minimum value over all legal child
+        nodes.
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        value : float
+            An score of each node on minimizing layer.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        if self._terminal_test(game, depth):
+            return self.score(game, self)
+        v = float("inf")
+        for m in game.get_legal_moves():
+            v = min(v, self._max_value(game.forecast_move(m), depth-1))
+        return v
+
+    def _max_value(self, game, depth):
+        """Return the value for a loss if the game is over,
+        otherwise return the maximum value over all legal child
+        nodes
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        value : float
+            An score of each node on maximizing layer.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        if self._terminal_test(game, depth):
+            return self.score(game, self)
+        v = float("-inf")
+        for m in game.get_legal_moves():
+            v = max(v, self._min_value(game.forecast_move(m), depth-1))
+        return v
 
 
 class AlphaBetaPlayer(IsolationPlayer):
@@ -254,8 +380,22 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # Initialize the best move so that this function returns something
+        # in case the search fails due to timeout
+        move = (-1, -1)
+
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            depth = 1
+            while True: # iterative deepening search
+                move = self.alphabeta(game, depth)
+                depth += 1
+        except SearchTimeout:
+            pass  # Handle any actions required after timeout as needed
+
+        # Return the best move from the last completed search iteration
+        return move
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -305,5 +445,114 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        best_score = alpha
+        best_move = None
+        for m in game.get_legal_moves():
+            v = self._min_value(game.forecast_move(m), depth-1, alpha, beta)
+            if v > best_score:
+                best_score = v
+                best_move = m
+            alpha = max(alpha, v)
+        return best_move
+
+    def _terminal_test(self, game, depth):
+        """Return True if the game is over for the active player
+        and False otherwise.
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        bool
+            Return True if the game is over for the active player
+            and False otherwise.
+        """
+        return (depth == 0) or (not bool(game.get_legal_moves()))
+
+    def _min_value(self, game, depth, alpha=float("-inf"), beta=float("inf")):
+        """Return the value for a win if the game is over,
+        otherwise return the minimum value over all legal child
+        nodes.
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        alpha : float
+            Alpha limits the lower bound of search on minimizing layers
+
+        beta : float
+            Beta limits the upper bound of search on maximizing layers
+
+        Returns
+        -------
+        value : float
+            An score of each node on minimizing layer.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        if self._terminal_test(game, depth):
+            return self.score(game, self)
+
+        v = float("inf")
+        for m in game.get_legal_moves():
+            v = min(v, self._max_value(game.forecast_move(m), depth-1, alpha, beta))
+            if v <= alpha:
+                return v
+            beta = min(beta, v)
+        return v
+
+    def _max_value(self, game, depth, alpha=float("-inf"), beta=float("inf")):
+        """Return the value for a loss if the game is over,
+        otherwise return the maximum value over all legal child
+        nodes
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        alpha : float
+            Alpha limits the lower bound of search on minimizing layers
+
+        beta : float
+            Beta limits the upper bound of search on maximizing layers
+
+        Returns
+        -------
+        value : float
+            An score of each node on maximizing layer.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        if self._terminal_test(game, depth):
+            return self.score(game, self)
+
+        v = float("-inf")
+        for m in game.get_legal_moves():
+            v = max(v, self._min_value(game.forecast_move(m), depth-1, alpha, beta))
+            if v >= beta:
+                return v
+            alpha = max(alpha, v)
+        return v
