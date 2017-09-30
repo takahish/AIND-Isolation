@@ -9,11 +9,10 @@ class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
 
-
-def euclidean_distance_score(game, player, own_weight=1., opp_weight=1.):
-    """The "euclidean_distance_score" evaluation function that outputs a
-    score equal to the euclidean distance in the space of the number of
-     weighted moves available to the two players.
+def opponent_weighted_improved_score(game, player):
+    """The "Improved" evaluation function discussed in lecture that outputs a
+    score equal to the difference in the number of moves available to the
+    two players. The "Opponent weighted" means opponent moves are weighted.
 
     Parameters
     ----------
@@ -26,11 +25,37 @@ def euclidean_distance_score(game, player, own_weight=1., opp_weight=1.):
         (i.e., `player` should be either game.__player_1__ or
         game.__player_2__).
 
-    own_weight : float
-        weigth for own moves
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+    if game.is_loser(player):
+        return float("-inf")
 
-    opp_weight : float
-        weight for oppnent moves
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = float(len(game.get_legal_moves(player)))
+    opp_moves = float(len(game.get_legal_moves(game.get_opponent(player))))
+
+    return own_moves - 2.0 * opp_moves # opponent weight is 2.0.
+
+
+def moves_ratio_score(game, player):
+    """The moves ratio evaluation function equal to the ratio of
+    the number of moves available to the two players.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
 
     Returns
     ----------
@@ -43,12 +68,42 @@ def euclidean_distance_score(game, player, own_weight=1., opp_weight=1.):
     if game.is_winner(player):
         return float("inf")
 
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    own_moves = float(len(game.get_legal_moves(player)))
+    opp_moves = float(len(game.get_legal_moves(game.get_opponent(player))))
 
-    return float(abs((own_weight*own_moves)-(opp_weight*opp_moves)))
+    return own_moves / (opp_moves + 1.0) # "+1.0 is avoiding from dividing by zero.
 
 
+def places_rate_score(game, player):
+    """The places rate evaluation function equal to the approximate
+    win probability using the number of moves available to the two players.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
+
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+    if game.is_loser(player):
+        return 0.
+
+    if game.is_winner(player):
+        return 1.
+
+    own_moves = float(len(game.get_legal_moves(player)))
+    opp_moves = float(len(game.get_legal_moves(game.get_opponent(player))))
+
+    return own_moves / (own_moves + opp_moves)
 
 
 def custom_score(game, player):
@@ -75,7 +130,7 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    return euclidean_distance_score(game, player, own_weight=1.0, opp_weight=1.0)
+    return opponent_weighted_improved_score(game, player)
 
 
 def custom_score_2(game, player):
@@ -100,7 +155,7 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    return euclidean_distance_score(game, player, own_weight=3.0, opp_weight=1.0)
+    return moves_ratio_score(game, player)
 
 
 def custom_score_3(game, player):
@@ -125,7 +180,7 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    return euclidean_distance_score(game, player, own_weight=1.0, opp_weight=3.0)
+    return places_rate_score(game, player)
 
 
 class IsolationPlayer:
